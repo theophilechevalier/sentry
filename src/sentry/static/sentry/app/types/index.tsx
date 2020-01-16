@@ -1,5 +1,5 @@
 import {SpanEntry} from 'app/components/events/interfaces/spans/types';
-import {API_SCOPES} from 'app/constants';
+import {API_ACCESS_SCOPES} from 'app/constants';
 import {Field} from 'app/views/settings/components/forms/type';
 import {Params} from 'react-router/lib/Router';
 import {Location} from 'history';
@@ -67,7 +67,7 @@ export type LightWeightOrganization = OrganizationSummary & {
   enhancedPrivacy: boolean;
   safeFields: string[];
   storeCrashReports: number;
-  access: string[];
+  access: Scope[];
   allowSharedIssues: boolean;
   dataScrubberDefaults: boolean;
   dataScrubber: boolean;
@@ -101,6 +101,10 @@ export type Project = {
   hasUserReports?: boolean;
   hasAccess: boolean;
   platform: string;
+
+  // XXX: These are part of the DetailedProject serializer
+  plugins: Plugin[];
+  processingIssues: number;
 };
 
 export type Team = {
@@ -224,9 +228,11 @@ export type AvatarUser = {
   name: string;
   username: string;
   email: string;
-  avatarUrl: string;
-  avatar: Avatar;
+  avatarUrl?: string;
+  avatar?: Avatar;
   ip_address: string;
+  // Compatibility shim with EventUser serializer
+  ipAddress?: string;
   options?: {
     avatarType: string;
   };
@@ -412,21 +418,25 @@ export type Group = {
 };
 
 export type Member = {
-  id: string;
-  user: User;
-  name: string;
+  dateCreated: string;
   email: string;
-  pending: boolean | undefined;
-  role: string;
-  roleName: string;
+  expired: boolean;
   flags: {
     'sso:linked': boolean;
     'sso:invalid': boolean;
   };
-  dateCreated: string;
+  id: string;
   inviteStatus: 'approved' | 'requested_to_be_invited' | 'requested_to_join';
+  invite_link: string | null;
   inviterName: string | null;
+  isOnlyOwner: boolean;
+  name: string;
+  pending: boolean | undefined;
+  role: string;
+  roleName: string;
+  roles: MemberRole[];
   teams: string[];
+  user: User;
 };
 
 export type AccessRequest = {
@@ -464,7 +474,7 @@ export type IntegrationFeature = {
 
 export type WebhookEvent = 'issue' | 'error';
 
-export type Scope = typeof API_SCOPES[number];
+export type Scope = typeof API_ACCESS_SCOPES[number];
 
 export type SentryAppSchemaIssueLink = {
   type: 'issue-link';
@@ -619,6 +629,12 @@ export type UserReport = {
   id: string;
   eventID: string;
   issue: Group;
+  name: string;
+  event: {eventID: string; id: string};
+  user: User;
+  dateCreated: string;
+  comments: string;
+  email: string;
 };
 
 export type Commit = {
@@ -665,7 +681,7 @@ export type NewQuery = {
   name: string;
   projects: Readonly<number[]>;
   fields: Readonly<string[]>;
-  fieldnames: Readonly<string[]>;
+  widths?: Readonly<string[]>;
   query: string;
   orderby?: string;
   range?: string;
@@ -692,4 +708,39 @@ export type SavedQueryState = {
 export type SelectValue<T> = {
   label: string;
   value: T;
+};
+
+/**
+ * The issue config form fields we get are basically the form fields we use in the UI but with some extra information.
+ * Some fields marked optional in the form field are guaranteed to exist so we can mark them as required here
+ */
+
+export type IssueConfigField = Field & {
+  name: string;
+  default?: string;
+  choices?: [number | string, number | string][];
+  url?: string;
+  multiple?: boolean;
+};
+
+export type IntegrationIssueConfig = {
+  status: ObjectStatus;
+  name: string;
+  domainName: string;
+  linkIssueConfig?: IssueConfigField[];
+  createIssueConfig?: IssueConfigField[];
+  provider: IntegrationProvider;
+  icon: string[];
+};
+
+export type OnboardingTask = {
+  task: number;
+  title: string;
+  description: string;
+  detailedDescription?: string;
+  skippable: boolean;
+  prereq: number[];
+  featureLocation: string;
+  location: string | (() => void);
+  display: boolean;
 };

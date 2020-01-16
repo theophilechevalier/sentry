@@ -1,5 +1,6 @@
 import React from 'react';
-import styled from 'react-emotion';
+import {RouteComponentProps} from 'react-router/lib/Router';
+import styled from '@emotion/styled';
 import get from 'lodash/get';
 
 import {t, tct} from 'app/locale';
@@ -13,7 +14,6 @@ import OrganizationAvatar from 'app/components/avatar/organizationAvatar';
 import SentryAppDetailsModal from 'app/components/modals/sentryAppDetailsModal';
 import {installSentryApp} from 'app/actionCreators/sentryAppInstallations';
 import {addQueryParamsToExistingUrl} from 'app/utils/queryString';
-import {recordInteraction} from 'app/utils/recordSentryAppInteraction';
 import {
   LightWeightOrganization,
   Organization,
@@ -21,7 +21,7 @@ import {
   SentryAppInstallation,
 } from 'app/types';
 
-type Props = AsyncView['props'];
+type Props = RouteComponentProps<{sentryAppSlug: string}, {}>;
 
 type State = AsyncView['state'] & {
   selectedOrgSlug: string | null;
@@ -32,10 +32,6 @@ type State = AsyncView['state'] & {
 };
 
 export default class SentryAppExternalInstallation extends AsyncView<Props, State> {
-  componentDidMount() {
-    recordInteraction(this.sentryAppSlug, 'sentry_app_viewed');
-  }
-
   getDefaultState() {
     const state = super.getDefaultState();
     return {
@@ -127,13 +123,14 @@ export default class SentryAppExternalInstallation extends AsyncView<Props, Stat
       const isInstalled = installations
         .map(install => install.app.slug)
         .includes(this.sentryAppSlug);
-      this.setState({organization, isInstalled});
+      //all state fields should be set at the same time so analytics in SentryAppDetailsModal works properly
+      this.setState({organization, isInstalled, reloading: false});
     } catch (err) {
       IndicatorStore.addError(
         t('Failed to retrieve organization or integration details')
       );
+      this.setState({reloading: false});
     }
-    this.setState({reloading: false});
   };
 
   onRequestSuccess = ({stateKey, data}) => {
@@ -272,7 +269,7 @@ export default class SentryAppExternalInstallation extends AsyncView<Props, Stat
             onInstall={this.onInstall}
             closeModal={this.onClose}
             isInstalled={this.disableInstall}
-            closeOnInstall={false}
+            view="external_install"
           />
         )}
       </div>

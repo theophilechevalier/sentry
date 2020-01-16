@@ -24,6 +24,22 @@ SEEN_COLUMN = "timestamp"
 # all values for a given tag/column
 BLACKLISTED_COLUMNS = frozenset(["project_id"])
 
+FUZZY_NUMERIC_KEYS = frozenset(
+    [
+        "device.battery_level",
+        "device.charging",
+        "device.online",
+        "device.simulator",
+        "error.handled",
+        "stack.colno",
+        "stack.in_app",
+        "stack.lineno",
+        "stack.stack_level",
+        "transaction.duration",
+    ]
+)
+FUZZY_NUMERIC_DISTANCE = 50
+
 tag_value_data_transformers = {"first_seen": parse_datetime, "last_seen": parse_datetime}
 
 
@@ -564,12 +580,21 @@ class SnubaTagStorage(TagStorage):
         return defaultdict(int, {k: v for k, v in result.items() if v})
 
     def get_tag_value_paginator(
-        self, project_id, environment_id, key, query=None, order_by="-last_seen"
+        self,
+        project_id,
+        environment_id,
+        key,
+        start=None,
+        end=None,
+        query=None,
+        order_by="-last_seen",
     ):
         return self.get_tag_value_paginator_for_projects(
             get_project_list(project_id),
             [environment_id] if environment_id else None,
             key,
+            start=start,
+            end=end,
             query=query,
             order_by=order_by,
         )
@@ -586,13 +611,19 @@ class SnubaTagStorage(TagStorage):
 
         conditions = []
 
-        if snuba_key in BLACKLISTED_COLUMNS:
-            snuba_key = "tags[%s]" % (key,)
-
-        if query:
-            conditions.append([snuba_key, "LIKE", u"%{}%".format(query)])
+        if key in FUZZY_NUMERIC_KEYS:
+            converted_query = int(query) if query is not None and query.isdigit() else None
+            if converted_query is not None:
+                conditions.append([snuba_key, ">=", converted_query - FUZZY_NUMERIC_DISTANCE])
+                conditions.append([snuba_key, "<=", converted_query + FUZZY_NUMERIC_DISTANCE])
         else:
-            conditions.append([snuba_key, "!=", ""])
+            if snuba_key in BLACKLISTED_COLUMNS:
+                snuba_key = "tags[%s]" % (key,)
+
+            if query:
+                conditions.append([snuba_key, "LIKE", u"%{}%".format(query)])
+            else:
+                conditions.append([snuba_key, "!=", ""])
 
         filters = {"project_id": projects}
         if environments:
@@ -617,7 +648,7 @@ class SnubaTagStorage(TagStorage):
         )
 
         tag_values = [
-            TagValue(key=key, value=value, **fix_tag_value_data(data))
+            TagValue(key=key, value=six.text_type(value), **fix_tag_value_data(data))
             for value, data in six.iteritems(results)
         ]
 

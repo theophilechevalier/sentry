@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 
 import re
+import uuid
 from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime
@@ -584,13 +585,27 @@ def convert_search_filter_to_snuba_query(search_filter):
                 )
             )
         return [name, search_filter.operator, internal_value]
+    elif name == "trace":
+        if not search_filter.value.raw_value:
+            operator = "IS NULL" if search_filter.operator == "=" else "IS NOT NULL"
+            return [name, operator, None]
+
+        try:
+            return [
+                name,
+                search_filter.operator,
+                six.text_type(uuid.UUID(search_filter.value.raw_value)),
+            ]
+        except Exception:
+            raise InvalidSearchQuery(
+                "Invalid value for the trace condition. Value must be a hexadecimal UUID string."
+            )
     else:
         value = (
             int(to_timestamp(value)) * 1000
             if isinstance(value, datetime) and name != "timestamp"
             else value
         )
-
         # Tags are never null, but promoted tags are columns and so can be null.
         # To handle both cases, use `ifNull` to convert to an empty string and
         # compare so we need to check for empty values.
@@ -702,13 +717,13 @@ FIELD_ALIASES = {
     "user": {"fields": ["user.id", "user.username", "user.email", "user.ip"]},
     # Long term these will become more complex functions but these are
     # field aliases.
-    "apdex": {"result_type": "number", "aggregations": [["apdex(duration, 300)", "", "apdex"]]},
+    "apdex": {"result_type": "number", "aggregations": [["apdex(duration, 300)", None, "apdex"]]},
     "impact": {
         "result_type": "number",
         "aggregations": [
             [
                 "(1 - ((countIf(duration < 300) + (countIf((duration > 300) AND (duration < 1200)) / 2)) / count())) + ((1 - 1 / sqrt(uniq(user))) * 3)",
-                "",
+                None,
                 "impact",
             ]
         ],

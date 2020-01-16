@@ -13,6 +13,15 @@ describe('DiscoverContainer', function() {
       url: '/organizations/org-slug/projects/',
       body: [],
     });
+    MockApiClient.addMockResponse({
+      url: '/organizations/org-slug/discover/query/?per_page=1000&cursor=0:0:1',
+      method: 'POST',
+      body: {
+        data: [{tags_key: 'tag1', count: 5}, {tags_key: 'tag2', count: 1}],
+        timing: {},
+        meta: [],
+      },
+    });
   });
 
   afterEach(function() {
@@ -26,15 +35,6 @@ describe('DiscoverContainer', function() {
       features: ['discover'],
     });
     beforeEach(async function() {
-      MockApiClient.addMockResponse({
-        url: '/organizations/org-slug/discover/query/?per_page=1000&cursor=0:0:1',
-        method: 'POST',
-        body: {
-          data: [{tags_key: 'tag1', count: 5}, {tags_key: 'tag2', count: 1}],
-          timing: {},
-          meta: [],
-        },
-      });
       MockApiClient.addMockResponse({
         url: '/organizations/org-slug/projects',
         method: 'GET',
@@ -243,7 +243,7 @@ describe('DiscoverContainer', function() {
         expect.anything(),
         expect.objectContaining({
           data: expect.objectContaining({
-            range: '14d',
+            range: '7d',
             start: null,
             end: null,
             utc: null,
