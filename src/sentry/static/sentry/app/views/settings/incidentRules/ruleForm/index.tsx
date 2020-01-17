@@ -323,7 +323,12 @@ class RuleFormContainer extends AsyncComponent<Props, State> {
               timeWindow={timeWindow}
             />
 
-            <RuleConditionsForm organization={organization} disabled={!hasAccess} />
+            <RuleConditionsForm
+              api={api}
+              projectSlug={params.projectId}
+              organization={organization}
+              disabled={!hasAccess}
+            />
 
             <Triggers
               disabled={!hasAccess}
