@@ -9,7 +9,7 @@ describe('Incident Rules Form', function() {
   const createWrapper = props =>
     mountWithTheme(
       <RuleFormContainer
-        params={{orgId: organization.slug}}
+        params={{orgId: organization.slug, projectId: project.slug}}
         organization={organization}
         project={project}
         {...props}
@@ -25,6 +25,10 @@ describe('Incident Rules Form', function() {
     });
     MockApiClient.addMockResponse({
       url: '/organizations/org-slug/users/',
+      body: [],
+    });
+    MockApiClient.addMockResponse({
+      url: '/projects/org-slug/project-slug/environments/',
       body: [],
     });
     MockApiClient.addMockResponse({
