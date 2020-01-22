@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # TODO:
-# - bold the postcondition notifications
+# - bold and newline pad the postcondition notifications
 
 # TODO: LDFLAGS for macos packages. I think we only need libxmlsec1 these days btw.
 # We should also pkg-config instead of hardcoding.
@@ -11,25 +11,27 @@ PIP_VERSION=19.2.3
 # operate in the git root - we're assuming this for all relative paths
 cd "$(git rev-parse --show-toplevel)"
 
+die () {
+    >&2 echo "$1"; exit 1
+}
+
+# TODO: we could generalize this for all "system" packages
 step_python () {
-    # TODO: install via brew if on macos
-    echo lol
+    # XXX: ideally, we should be using pyenv, but this will do for now
+    case "$OSTYPE" in
+    darwin*)
+        brew install python@2
+        ;;
+    *)
+        false
+        ;;
+    esac
+    return $?
 }
 
 step_python_postcondition () {
     echo "Making sure python2.7 is available..."
-    # TODO: use python to assert sys.version 2, 17
-    return $?
-}
-
-step_pip () {
-    # TODO: use python2.7 -m pip to install
-    :
-}
-
-step_pip_postcondition () {
-    echo "Making sure pip ${PIP_VERSION} is installed..."
-    # TODO
+    python2.7 -c "import sys; sys.exit(sys.version_info[:2] != (2, 7))"
     return $?
 }
 
@@ -41,16 +43,17 @@ step_pip_postcondition () {
 
 step_venv () {
     # this is a noop, since venv-update is the best way to check AND ensure
-    # the postcondition
+    # the postcondition. Although I could move venv-update here, that'd make more sense.
     :
 }
 
 # TODO: should we separately assert that sentry is installed, or do it here?
-# TODO:currently, we aren't using pip-faster, but I'd like to eventually.
+# TODO: currently, we aren't using pip-faster, but I'd like to eventually, preferably self-contained since it installs venv-update from pypi just for pip-faster, and current metadata pins pip to < 19 which results in an ugly/annoying warning.
 step_venv_postcondition () {
     echo "Making sure the virtualenv is up to date with sentry's requirements..."
     ./magic/bin/venv-update \
         venv= -ppython2.7 ./.venv \
+        bootstrap-deps= "pip==${PIP_VERSION}" \
         install= -r requirements-base.txt -r requirements-dev.txt \
         pip-command= $PIP install
     return $?
@@ -62,11 +65,12 @@ step_venv_postcondition () {
 
 # TODO set e and pipefail with a trap to report unsuccessful
 
+# TODO: properly handle SIGINT to exit the entire loop, lol
+
 for step in \
     step_python \
-    step_pip \
     step_venv \
     ; do
     "${step}_postcondition" || "$step"
-    # "${step}_postcondition" || die
+    "${step}_postcondition" || die "${step}_postcondition failed."
 done
