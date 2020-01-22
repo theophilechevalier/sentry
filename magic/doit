@@ -2,6 +2,7 @@
 
 # TODO:
 # - bold and newline pad the postcondition notifications
+# - set up virtualenv automatic sourcing (via direnv?)
 
 # TODO: LDFLAGS for macos packages. I think we only need libxmlsec1 these days btw.
 # We should also pkg-config instead of hardcoding.
@@ -15,7 +16,8 @@ die () {
     >&2 echo "$1"; exit 1
 }
 
-# TODO: we could generalize this for all "system" packages
+# TODO: More steps for system packages. We don't need a lot, so modularizing seems fine. Assume brew for now.
+
 step_python () {
     # XXX: ideally, we should be using pyenv, but this will do for now
     case "$OSTYPE" in
@@ -35,22 +37,9 @@ step_python_postcondition () {
     return $?
 }
 
-# TODO: system packages/build requirements, assume brew for now
-
-# TODO: ensure virtualenv
-# one pain point is automatically sourcing the virtualenv...
-# we can't do it from here, but we could introduce some magic like direnv
-
-step_venv () {
-    # this is a noop, since venv-update is the best way to check AND ensure
-    # the postcondition. Although I could move venv-update here, that'd make more sense.
-    :
-}
-
 # TODO: should we separately assert that sentry is installed, or do it here?
 # TODO: currently, we aren't using pip-faster, but I'd like to eventually, preferably self-contained since it installs venv-update from pypi just for pip-faster, and current metadata pins pip to < 19 which results in an ugly/annoying warning.
-step_venv_postcondition () {
-    echo "Making sure the virtualenv is up to date with sentry's requirements..."
+step_venv () {
     ./magic/bin/venv-update \
         venv= -ppython2.7 ./.venv \
         bootstrap-deps= "pip==${PIP_VERSION}" \
@@ -59,18 +48,22 @@ step_venv_postcondition () {
     return $?
 }
 
+step_venv_postcondition () {
+    echo "Making sure the virtualenv is up to date with sentry's requirements..."
+    # this is a noop, since venv-update is the best way to check AND ensure
+    return 0
+}
+
 # TODO: git hooks, pre-commit
 
 # TODO: sentry init, devservices, node/yarn stuff, webpack stuff...
 
-# TODO set e and pipefail with a trap to report unsuccessful
-
-# TODO: properly handle SIGINT to exit the entire loop, lol
+# does bash propagate SIGINT all the way out of the for loop?
 
 for step in \
     step_python \
     step_venv \
     ; do
-    "${step}_postcondition" || "$step"
+    "${step}_postcondition" || "$step" || die "${step} failed."
     "${step}_postcondition" || die "${step}_postcondition failed."
 done
