@@ -54,7 +54,27 @@ step_venv_postcondition () {
     return 0
 }
 
-# TODO: git hooks, pre-commit
+step_git_hooks () {
+    ln -sf config/hooks/* ./.git/hooks
+    return $?
+}
+
+step_git_hooks_postcondition () {
+    echo "Making sure git hooks are set up..."
+    # noop, since the step's quite lightweight
+    return 0
+}
+
+step_pre-commit () {
+    :
+}
+
+step_pre-commit_postcondition () {
+    echo "Making sure pre-commit and its hooks are installed and up to date..."
+    # TODO: meh... might just set x and pipefail so we don't have to keep returning $?
+    source ./.venv/bin/activate || return $?
+
+}
 
 # TODO: sentry init, devservices, node/yarn stuff, webpack stuff...
 
@@ -63,6 +83,8 @@ step_venv_postcondition () {
 for step in \
     step_python \
     step_venv \
+    step_git_hooks \
+    step_pre-commit \
     ; do
     "${step}_postcondition" || "$step" || die "${step} failed."
     "${step}_postcondition" || die "${step}_postcondition failed."
