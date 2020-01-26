@@ -534,7 +534,7 @@ export type SentryApp = {
 export type Integration = {
   id: string;
   name: string;
-  icon: string;
+  icon: object;
   domainName: string;
   accountType: string;
   status: ObjectStatus;
@@ -735,7 +735,7 @@ export type IntegrationIssueConfig = {
   linkIssueConfig?: IssueConfigField[];
   createIssueConfig?: IssueConfigField[];
   provider: IntegrationProvider;
-  icon: string[];
+  icon: object[];
 };
 
 export type OnboardingTask = {
