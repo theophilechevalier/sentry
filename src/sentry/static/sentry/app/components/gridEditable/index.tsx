@@ -6,6 +6,7 @@ import {openModal} from 'app/actionCreators/modal';
 import EmptyStateWarning from 'app/components/emptyStateWarning';
 import InlineSvg from 'app/components/inlineSvg';
 import LoadingIndicator from 'app/components/loadingIndicator';
+import {IconWarning} from 'app/icons';
 
 import {
   GridColumn,
@@ -470,7 +471,7 @@ class GridEditable<
     return (
       <GridRow>
         <GridBodyCellStatus>
-          <GridStatusErrorAlert type="error" icon="icon-circle-exclamation">
+          <GridStatusErrorAlert type="error" icon={<IconWarning />}>
             {error}
           </GridStatusErrorAlert>
         </GridBodyCellStatus>
